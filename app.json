@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "game-avalier",
-    "slug": "game-avalier",
+    "name": "app-busca-filmes",
+    "slug": "app-busca-filmes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
