@@ -1,103 +1,160 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  TouchableOpacity,
 } from "react-native";
 
-type Post = { id: number; title: string; body: string };
-const API_BASE = "https://jsonplaceholder.typicode.com";
+type Movie = {
+  imdbID: string;
+  Title: string;
+  Year: string;
+  Poster: string;
+};
+
+const API_URL = "https://www.omdbapi.com/";
+const API_KEY = "96bb7bba";
 
 export default function App() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  async function load() {
+  async function searchMovies() {
+    if (!query.trim()) return;
+    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/posts`);
-      const data: Post[] = await res.json();
-      setPosts(data);
-    } catch {
+      const res = await fetch(
+        `${API_URL}?apikey=${API_KEY}&s=${query}&type=movie`
+      );
+      const data = await res.json();
+
+      if (data.Search) {
+        setMovies(data.Search);
+      } else {
+        setMovies([]);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar filmes:", error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const filtered = query
-    ? posts.filter((p) => p.title.toLowerCase().includes(query.toLowerCase()))
-    : posts;
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.muted}>Carregando...</Text>
-      </SafeAreaView>
-    );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <TextInput
-        placeholder="Buscar por título..."
-        value={query}
-        onChangeText={setQuery}
-        style={styles.input}
-      />
+      <Text style={styles.header}>🎬 Buscar Filmes</Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => String(item.id)}
-        onRefresh={load}
-        refreshing={refreshing}
-        ListEmptyComponent={<Text style={styles.muted}>Nenhum resultado.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text numberOfLines={2} style={styles.cardBody}>
-              {item.body}
+      <View style={styles.searchContainer}>
+        <TextInput
+          placeholder="Digite o nome do filme..."
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={searchMovies}
+          style={styles.input}
+        />
+        <TouchableOpacity onPress={searchMovies} style={styles.button}>
+          <Text style={styles.buttonText}>Buscar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.muted}>Carregando...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={movies}
+          keyExtractor={(item) => item.imdbID}
+          ListEmptyComponent={
+            <Text style={[styles.muted, styles.empty]}>
+              {query ? "Nenhum filme encontrado." : "Pesquise um filme acima."}
             </Text>
-          </View>
-        )}
-      />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Image
+                source={{
+                  uri:
+                    item.Poster !== "N/A"
+                      ? item.Poster
+                      : "https://via.placeholder.com/100x150.png?text=No+Image",
+                }}
+                style={styles.poster}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{item.Title}</Text>
+                <Text style={styles.cardYear}>Ano: {item.Year}</Text>
+              </View>
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7F9" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  muted: { color: "#666" },
-
+  header: {
+    fontSize: 22,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 80,
+    marginBottom: 8,
+    color: "#222",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
   input: {
-    margin: 16,
+    flex: 1,
     backgroundColor: "#FFF",
     padding: 12,
     borderRadius: 10,
     borderColor: "#DDD",
     borderWidth: StyleSheet.hairlineWidth,
+    marginRight: 8,
   },
-
+  button: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  buttonText: { color: "#FFF", fontWeight: "600" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  muted: { color: "#888" },
+  empty: { textAlign: "center", marginTop: 30 },
   card: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#FFF",
     marginHorizontal: 16,
-    marginVertical: 8,
-    padding: 12,
+    marginVertical: 6,
+    padding: 10,
     borderRadius: 10,
     borderColor: "#EEE",
     borderWidth: StyleSheet.hairlineWidth,
+    elevation: 1,
   },
-  cardTitle: { fontWeight: "700", marginBottom: 4, fontSize: 16 },
-  cardBody: { color: "#444" },
+  poster: {
+    width: 60,
+    height: 90,
+    marginRight: 12,
+    borderRadius: 6,
+    backgroundColor: "#DDD",
+  },
+  cardTitle: { fontWeight: "700", fontSize: 16, color: "#333" },
+  cardYear: { color: "#666", marginTop: 4 },
 });
